@@ -85,7 +85,11 @@ Add the overlay to home.nix (Home Manager) or configuration.nix (NixOS):
 {
   nixpkgs.overlays = [
     (import (builtins.fetchTarball {
+<<<<<<< HEAD
       url = https://github.com/Rabbit-Company/Passky-Desktop/archive/main.tar.gz;
+=======
+      url = https://github.com/Rabbit-Company/Passky-Desktop/archive/master.tar.gz;
+>>>>>>> 3e9c9d9 (README fix)
     }))
   ];
 
