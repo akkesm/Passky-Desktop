@@ -88,6 +88,123 @@
         nixpkgs.overlays = [ self.overlay ];
         home.packages = [ pkgs.passky ];
       };
+      nixosModules.passky = { pkgs, lib, config, ... }:
+        with lib;
+
+        let
+          cfg = config.programs.passky;
+          browsers = [ "chrome" "brave" "vivaldi" "chromium" ];
+          installChromium = pkgs.writeText "ngncpgfjhnkgfcjamgljadegplonbihi.json" ''
+            {
+              "external_update_url": "https://clients2.google.com/service/update2/crx"
+            }
+          '';
+          chromiumPolicy = ''
+            {
+              "ExtensionInstallForcelist": [
+               "ngncpgfjhnkgfcjamgljadegplonbihi;https://clients2.google.com/service/update2/crx"
+              ]
+            }
+          '';
+          firefoxPolicy = ''
+            {
+              "passky@passky.org": {
+                "installation_mode": "force_installed",
+                "install_url": "https://addons.mozilla.org/firefox/downloads/latest/passky/latest.xpi"
+              }
+            }
+          '';
+        in
+        {
+          options.programs.passky = {
+            enable = mkEnableOption "Passky, a simple and secure password manager";
+
+            package = mkOption {
+              type = types.package;
+              default = pkgs.passky;
+              defaultText = "pkgs.passky";
+              description = "Passky package to use.";
+            };
+
+            extension = {
+              enable = mkEnableOption "the Passky browser extension";
+
+              browsers = mkOption {
+                type = types.listOf (types.enum browsers);
+                default = browsers;
+                example = [ "firefox" ];
+              };
+            };
+
+            config = mkMerge [
+                (mkIf cfg.enable {
+                  nixpkgs.overlays = [ self.overlay ];
+                  home.packages = [ cfg.package ];
+                })
+
+                (mkIf cfg.extension.enable {
+                  environment.etc = foldl' (a: b: a // b) { } (concatMap (x:
+                    with pkgs.stdenv;
+                    if x == "chrome" then
+                      let
+                        dir = "opt/chrome";
+                      in {
+                        "${dir}/policies/managed/org.passky.json".text = chromiumPolicy;
+                      }
+                    else if x == "chromium" then
+                      let
+                        dir = "chromium";
+                      in {
+                        "${dir}/policies/managed/org.passky.json".text = chromiumPolicy;
+                      }
+                    else if x == "firefox" then
+                      let
+                        dir = "firefox";
+                      in {
+                        "${dir}/distribution/policies.json".text = firefoxPolicy;
+                      }
+                    else if x == "vivaldi" then
+                      let
+                        dir = "opt/vivaldi"; #TODO
+                      in {
+                        "${dir}/policies/managed/org.passky.json".text = chromiumPolicy;
+                      }
+                    else
+                      throw "unknown browser ${x}") config.programs.browserpass.browsers);
+                })
+              ];
+          };
+        };
+      nixosModule = self.nixosModulesModules.passky;
+
+      homeManagerModules.passky = { pkgs, lib, config, ... }:
+        with lib;
+
+        let
+          cfg = config.programs.passky;
+        in
+        {
+          options.programs.passky = {
+            enable = mkEnableOption "Passky, a simple and secure password manager";
+
+            package = mkOption {
+              type = types.package;
+              default = pkgs.passky;
+              defaultText = "pkgs.passky";
+              description = "Passky package to use.";
+            };
+
+            extension = {
+              enable = mkEnableOption "the Passky browser extension";
+            };
+          };
+
+          config = mkIf cfg.enable {
+            nixpkgs.overlays = [ self.overlay ];
+            home.packages = [ cfg.package ];
+          };
+        };
+>>>>>>> bf406f2 (add modules)
       homeManagerModule = self.homeManagerModules.passky;
 
       devShell = forAllSystems (system:
